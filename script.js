@@ -109,6 +109,41 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// Add touch controls after the keyboard controls
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault(); // Prevent scrolling
+    
+    if (!gameRunning) {
+        resetGame();
+        return;
+    }
+
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const touchX = touch.clientX - rect.left;
+    
+    // Divide screen into zones
+    if (touchX < canvas.width * 0.3) {
+        // Left third - move left
+        if (currentLane > 0) {
+            currentLane--;
+            playerX = GAME.LANES[currentLane] - GAME.PLAYER_SIZE/2;
+        }
+    } else if (touchX > canvas.width * 0.7) {
+        // Right third - move right
+        if (currentLane < 2) {
+            currentLane++;
+            playerX = GAME.LANES[currentLane] - GAME.PLAYER_SIZE/2;
+        }
+    } else {
+        // Middle third - jump
+        if (!isJumping) {
+            isJumping = true;
+            jumpVelocity = GAME.JUMP_FORCE;
+        }
+    }
+});
+
 function spawnObject() {
     const rand = Math.random();
     let type, width, height;
@@ -400,6 +435,24 @@ function gameOver() {
     finalScoreDisplay.textContent = score;
     saveScore(playerName, score);
     updateLeaderboardDisplay();
+}
+
+// Add touch instructions to the game over screen
+function updateGameOverText() {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const instructions = isMobile ? 
+        "Tap left/right sides to move<br>Tap middle to jump" :
+        "Press Space to Restart";
+    
+    gameOverDisplay.innerHTML = `
+        Game Over!<br>
+        Score: <span id="finalScore">${score}</span><br>
+        <div id="leaderboard">
+            <h3>Top Scores</h3>
+            <ol id="topScores"></ol>
+        </div>
+        ${instructions}
+    `;
 }
 
 // Initialize the game

@@ -79,67 +79,45 @@ schneebergImg.onerror = () => {
 // Objects array
 const objects = [];
 
-// Controls
-document.addEventListener('keydown', (e) => {
-    if (!gameRunning && e.code === 'Space') {
-        resetGame();
-        return;
-    }
-    
-    switch(e.code) {
-        case 'ArrowLeft':
-            if (currentLane > 0) {
-                currentLane--;
-                playerX = GAME.LANES[currentLane] - GAME.PLAYER_SIZE/2;
-            }
-            break;
-        case 'ArrowRight':
-            if (currentLane < 2) {
-                currentLane++;
-                playerX = GAME.LANES[currentLane] - GAME.PLAYER_SIZE/2;
-            }
-            break;
-        case 'Space':
-        case 'ArrowUp':
-            if (!isJumping) {
-                isJumping = true;
-                jumpVelocity = GAME.JUMP_FORCE;  // Stronger jump
-            }
-            break;
-    }
+// Replace the touchstart event listener with these touch events
+let touchStartX = 0;
+let touchStartTime = 0;
+
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartTime = Date.now();
 });
 
-// Add touch controls after the keyboard controls
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // Prevent scrolling
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    const touchEndX = touch.clientX;
+    const touchEndTime = Date.now();
     
-    if (!gameRunning) {
-        resetGame();
-        return;
-    }
-
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const touchX = touch.clientX - rect.left;
+    const swipeDistance = touchEndX - touchStartX;
+    const swipeTime = touchEndTime - touchStartTime;
     
-    // Divide screen into zones
-    if (touchX < canvas.width * 0.3) {
-        // Left third - move left
-        if (currentLane > 0) {
-            currentLane--;
-            playerX = GAME.LANES[currentLane] - GAME.PLAYER_SIZE/2;
-        }
-    } else if (touchX > canvas.width * 0.7) {
-        // Right third - move right
-        if (currentLane < 2) {
-            currentLane++;
-            playerX = GAME.LANES[currentLane] - GAME.PLAYER_SIZE/2;
-        }
-    } else {
-        // Middle third - jump
+    // If it's a quick tap (less than 200ms), jump
+    if (Math.abs(swipeDistance) < 30 && swipeTime < 200) {
         if (!isJumping) {
             isJumping = true;
             jumpVelocity = GAME.JUMP_FORCE;
+        }
+        return;
+    }
+    
+    // If it's a swipe (longer movement), change lanes
+    if (Math.abs(swipeDistance) > 50) {
+        if (swipeDistance > 0 && currentLane < 2) {
+            // Swipe right
+            currentLane++;
+            playerX = GAME.LANES[currentLane] - GAME.PLAYER_SIZE/2;
+        } else if (swipeDistance < 0 && currentLane > 0) {
+            // Swipe left
+            currentLane--;
+            playerX = GAME.LANES[currentLane] - GAME.PLAYER_SIZE/2;
         }
     }
 });
@@ -437,11 +415,11 @@ function gameOver() {
     updateLeaderboardDisplay();
 }
 
-// Add touch instructions to the game over screen
+// Update the game over instructions
 function updateGameOverText() {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const instructions = isMobile ? 
-        "Tap left/right sides to move<br>Tap middle to jump" :
+        "Swipe left/right to move<br>Tap to jump" :
         "Press Space to Restart";
     
     gameOverDisplay.innerHTML = `
